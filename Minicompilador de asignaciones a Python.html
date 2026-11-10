@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minicompilador de asignaciones a Python</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--tx:#1d1d1b;--mu:#6b6a64;--bd:#dedcd3;--ac:#c4161c;--ok:#1b7a3d;--er:#b3261e;--code:#f0efe9;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--card:#212120;--tx:#ecebe5;--mu:#a19f96;--bd:#3a3935;--ac:#ff6b6f;--ok:#58c27d;--er:#ff8a80;--code:#2a2a28;color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:28px 20px 8px;max-width:960px;margin:auto}
+header small{color:var(--ac);font-weight:600;letter-spacing:.04em}
+h1{font-size:26px;margin:6px 0}
+header p{color:var(--mu);margin:0}
+main{max-width:960px;margin:auto;padding:12px 20px 40px}
+section{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;margin:16px 0}
+h2{font-size:18px;margin:0 0 10px}h3{font-size:15px;margin:16px 0 6px}
+ol.steps{display:flex;gap:8px;flex-wrap:wrap;padding:0;list-style:none;margin:8px 0}
+ol.steps li{flex:1 1 140px;background:var(--code);border-radius:8px;padding:8px 10px;font-size:13px}
+ol.steps b{display:block}
+textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--code);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:10px;resize:vertical}
+button,.btn{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:7px 12px;border-radius:8px;cursor:pointer}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button.on{background:var(--tx);color:var(--bg)}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--bd);padding:6px 8px;text-align:left;white-space:nowrap}
+th{background:var(--code)}
+pre{background:var(--code);border-radius:8px;padding:10px;overflow-x:auto;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:6px 0}
+.ok{color:var(--ok);font-weight:600}.er{color:var(--er);font-weight:600}
+.err{border-left:3px solid var(--er);padding:4px 10px;margin:6px 0;background:var(--code);border-radius:4px;font-size:13px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+footer{text-align:center;color:var(--mu);font-size:12px;padding:10px 20px 30px}
+</style>
+</head>
+<body>
+<header>
+<small>Teoría de la Computación · USIL</small>
+<h1>Minicompilador de asignaciones a Python</h1>
+<p>Análisis léxico, sintáctico y semántico con traducción a Python y JSON</p>
+</header>
+<main>
+<section id="caso">
+<h2>A) Caso</h2>
+<p>Un negocio de manualidades registra su inventario con instrucciones de asignación (<code>insumo</code>, <code>costo_empaque</code>, <code>calculo</code>). El minicompilador valida cada línea en tres fases y traduce las correctas a código Python y JSON.</p>
+<ol class="steps">
+<li><b>1 · Entrada</b>Archivo .txt o editor</li>
+<li><b>2 · Léxico</b>Expresiones regulares</li>
+<li><b>3 · Sintáctico</b>Descenso recursivo (CFG)</li>
+<li><b>4 · Semántico</b>Tabla de símbolos</li>
+<li><b>5 · Traducción</b>Python y JSON</li>
+</ol>
+<h3>Ingreso de datos</h3>
+<textarea id="src" spellcheck="false"></textarea>
+<div class="row">
+<input type="file" id="file" accept=".txt">
+<button id="ex1">Ejemplo válido</button>
+<button id="ex2">Ejemplo con errores</button>
+<button id="clr">Limpiar</button>
+<button class="p" id="run">Compilar</button>
+</div>
+<p style="color:var(--mu);font-size:13px">Formato (una instrucción por línea): <code>tipo nombre = expresión</code>. Tipos: insumo, costo_empaque, calculo. Operadores: + − * / y paréntesis.</p>
+</section>
+
+<section id="resultado">
+<h2>B) Resultado</h2>
+<div id="status" style="color:var(--mu)">Compile un texto para ver el resultado.</div>
+<h3>Errores detectados</h3><div id="errs">—</div>
+<h3>Traducción</h3>
+<div class="tabs" id="outTabs"><button class="on" data-o="py">Python</button><button data-o="js">JSON</button></div>
+<pre id="out"></pre>
+<div class="row"><button id="cp">Copiar</button><button id="dl">Descargar</button></div>
+</section>
+
+<section id="proceso">
+<h2>C) Proceso interno</h2>
+<div class="tabs" id="pTabs">
+<button class="on" data-p="lex">Análisis léxico</button><button data-p="sin">Análisis sintáctico</button><button data-p="sem">Análisis semántico</button>
+</div>
+<div id="p-lex"></div><div id="p-sin" hidden></div><div id="p-sem" hidden></div>
+</section>
+</main>
+<footer>Teoría de la Computación · USIL · Lima, 2026</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const EX1="insumo hilos_lana = 200\ninsumo ojos_seguridad = 150\ncosto_empaque caja_entrega = 4.5\ncalculo total_materiales = hilos_lana + ojos_seguridad\ncalculo costo_produccion = total_materiales * 1.50";
+const EX2="insumo hilos_lana = 200\ninsumo tela_polar = $50\ncalculo total = tela_polar +\ncalculo costo = relleno_fibra * 2\ninsumo hilos_lana = 10\ncalculo ratio = hilos_lana / 0";
+$('src').value=EX1;
+$('ex1').onclick=()=>$('src').value=EX1;
+$('ex2').onclick=()=>$('src').value=EX2;
+$('clr').onclick=()=>{$('src').value='';};
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('src').value=r.result;};r.readAsText(f);};
+
+const RULES=[
+['KW_TIPO',/^(insumo|costo_empaque|calculo)\b/,'\\b(insumo|costo_empaque|calculo)\\b'],
+['NUMBER_FLOAT',/^\d+\.\d+/,'\\d+\\.\\d+'],['NUMBER_INT',/^\d+/,'\\d+'],
+['IDENTIFIER',/^[a-zA-Z_][a-zA-Z0-9_]*/,'[a-zA-Z_][a-zA-Z0-9_]*'],
+['OP_PLUS',/^\+/,'\\+'],['OP_MINUS',/^-/,'-'],['OP_MUL',/^\*/,'\\*'],['OP_DIV',/^\//,'/'],
+['OP_ASSIGN',/^=/,'='],['LPAREN',/^\(/,'\\('],['RPAREN',/^\)/,'\\)'],['WHITESPACE',/^[ \t]+/,'[ \\t]+']];
+function lex(line){const t=[];let s=line,col=1;
+while(s.length){let m=null;for(const [n,re] of RULES){const x=re.exec(s);if(x){m=[n,x[0]];break;}}
+if(!m)m=['UNKNOWN',s[0]];
+if(m[0]!=='WHITESPACE')t.push({k:m[0],v:m[1],col});
+s=s.slice(m[1].length);col+=m[1].length;}
+return t;}
+
+function parse(t){let i=0;const peek=()=>t[i],eat=k=>{const x=t[i];if(!x||x.k!==k)throw new Error(`se esperaba ${k}${x?` y se encontró “${x.v}”`:' pero la línea terminó'}`);i++;return x;};
+function expr(){let l=term();while(peek()&&['OP_PLUS','OP_MINUS'].includes(peek().k)){const o=t[i++];l={t:'bin',op:o.v,l,r:term()};}return l;}
+function term(){let l=factor();while(peek()&&['OP_MUL','OP_DIV'].includes(peek().k)){const o=t[i++];l={t:'bin',op:o.v,l,r:factor()};}return l;}
+function factor(){const x=peek();if(!x)throw new Error('expresión incompleta');
+if(x.k==='NUMBER_INT'||x.k==='NUMBER_FLOAT'){i++;return{t:'num',v:parseFloat(x.v),raw:x.v};}
+if(x.k==='IDENTIFIER'){i++;return{t:'id',n:x.v};}
+if(x.k==='LPAREN'){i++;const e=expr();eat('RPAREN');return e;}
+throw new Error(`token inesperado “${x.v}”`);}
+const tipo=eat('KW_TIPO'),id=eat('IDENTIFIER');eat('OP_ASSIGN');const e=expr();
+if(i<t.length)throw new Error(`token sobrante “${t[i].v}”`);
+return{tipo:tipo.v,id:id.v,e};}
+
+function ev(n,sym){if(n.t==='num')return n.v;if(n.t==='id'){if(!(n.n in sym))throw new Error(`la variable “${n.n}” no fue declarada`);return sym[n.n].value;}
+const a=ev(n.l,sym),b=ev(n.r,sym);if(n.op==='+')return a+b;if(n.op==='-')return a-b;if(n.op==='*')return a*b;if(b===0)throw new Error('división entre cero');return a/b;}
+const show=n=>n.t==='num'?n.raw:n.t==='id'?n.n:'('+show(n.l)+' '+n.op+' '+show(n.r)+')';
+const flat=n=>n.t==='num'?n.raw:n.t==='id'?n.n:(n.l.t==='bin'&&'+-'.includes(n.l.op)&&'*/'.includes(n.op)?'('+flat(n.l)+')':flat(n.l))+' '+n.op+' '+(n.r.t==='bin'?'('+flat(n.r)+')':flat(n.r));
+function tree(n,d=0){const p='  '.repeat(d);if(n.t==='num')return p+'Número '+n.raw+'\n';if(n.t==='id')return p+'Variable '+n.n+'\n';return p+'Operación '+n.op+'\n'+tree(n.l,d+1)+tree(n.r,d+1);}
+
+let RES=null,OUT='py';
+function compile(){
+const lines=$('src').value.split('\n'),errs=[],recs=[],toks=[],trees=[],sym={};let validLines=0,total=0;
+lines.forEach((raw,ix)=>{const ln=ix+1;if(!raw.trim())return;total++;
+const t=lex(raw);toks.push({ln,raw,t});
+const bad=t.filter(x=>x.k==='UNKNOWN');
+if(bad.length){bad.forEach(b=>errs.push({ln,ph:'Léxica',m:`carácter no válido “${b.v}” en la columna ${b.col}`}));return;}
+let ast;try{ast=parse(t);}catch(e){errs.push({ln,ph:'Sintáctica',m:e.message});return;}
+trees.push({ln,ast});
+try{if(ast.id in sym)throw new Error(`la variable “${ast.id}” ya fue declarada en la línea ${sym[ast.id].ln}`);
+const v=ev(ast.e,sym);sym[ast.id]={tipo:ast.tipo,value:Math.round(v*1e6)/1e6,expr:flat(ast.e),ln};
+recs.push({type:ast.tipo,id:ast.id,value:sym[ast.id].value,expr:sym[ast.id].expr});validLines++;}
+catch(e){errs.push({ln,ph:'Semántica',m:e.message});}});
+RES={total,validLines,errs,recs,toks,trees,sym};render();}
+
+function render(){const r=RES;
+$('status').innerHTML=`<span class="${r.errs.length?'er':'ok'}">${r.errs.length?'Compilación con errores':'Compilación exitosa'}</span> · ${r.validLines} de ${r.total} instrucciones válidas · ${r.errs.length} error(es)`;
+$('errs').innerHTML=r.errs.length?r.errs.map(e=>`<div class="err"><b>Línea ${e.ln} · ${e.ph}:</b> ${esc(e.m)}</div>`).join(''):'<span class="ok">Sin errores.</span>';
+showOut();
+$('p-lex').innerHTML=`<h3>Tokens y expresiones regulares</h3><div class="wrap"><table><tr><th>N</th><th>Token</th><th>Expresión regular</th></tr>${RULES.map((x,i)=>`<tr><td>${i+1}</td><td>${x[0]}</td><td><code>${esc(x[2])}</code></td></tr>`).join('')}<tr><td>${RULES.length+1}</td><td>UNKNOWN</td><td><code>.</code></td></tr></table></div>
+<h3>Lexemas reconocidos</h3><div class="wrap"><table><tr><th>Línea</th><th>Tokens</th></tr>${r.toks.map(x=>`<tr><td>${x.ln}</td><td>${x.t.map(a=>`<code>${a.k}</code>(${esc(a.v)})`).join(' ')}</td></tr>`).join('')}</table></div>`;
+$('p-sin').innerHTML=`<h3>Gramática libre de contexto</h3><pre>programa → instruccion*
+instruccion → tipo ID '=' expr
+tipo → insumo | costo_empaque | calculo
+expr → term rest_E
+rest_E → ('+' | '-') term rest_E | ε
+term → factor rest_T
+rest_T → ('*' | '/') factor rest_T | ε
+factor → NUMBER_INT | NUMBER_FLOAT | IDENTIFIER | '(' expr ')'</pre>
+<h3>Árbol sintáctico por instrucción</h3>${r.trees.map(x=>`<b>Línea ${x.ln}</b><pre>Asignación ${esc(x.ast.tipo)} → ${esc(x.ast.id)}\n${esc(tree(x.ast.e,1))}</pre>`).join('')||'—'}`;
+$('p-sem').innerHTML=`<h3>Tabla de símbolos</h3><div class="wrap"><table><tr><th>Línea</th><th>Tipo</th><th>Variable</th><th>Expresión</th><th>Valor</th></tr>${Object.entries(r.sym).map(([k,v])=>`<tr><td>${v.ln}</td><td>${v.tipo}</td><td>${esc(k)}</td><td><code>${esc(v.expr)}</code></td><td>${v.value}</td></tr>`).join('')}</table></div>
+<h3>Reglas semánticas aplicadas</h3><pre>1. Toda variable usada en una expresión debe estar declarada antes.
+2. Un nombre de variable no puede declararse dos veces.
+3. No se permite la división entre cero.
+4. El valor de cada asignación se evalúa y se guarda en la tabla.</pre>`;}
+
+function outText(){if(!RES)return'';
+if(OUT==='py')return RES.recs.map(x=>`${x.id} = ${x.expr}`).join('\n');
+return JSON.stringify({status:RES.errs.length?'ERROR':'SUCCESS',inventory_compilation:RES.recs},null,2);}
+function showOut(){$('out').textContent=outText();}
+$('outTabs').onclick=e=>{const o=e.target.dataset.o;if(!o)return;OUT=o;[...$('outTabs').children].forEach(b=>b.classList.toggle('on',b.dataset.o===o));showOut();};
+$('pTabs').onclick=e=>{const p=e.target.dataset.p;if(!p)return;[...$('pTabs').children].forEach(b=>b.classList.toggle('on',b.dataset.p===p));['lex','sin','sem'].forEach(k=>$('p-'+k).hidden=k!==p);};
+$('cp').onclick=async()=>{try{await navigator.clipboard.writeText(outText());$('cp').textContent='Copiado';setTimeout(()=>$('cp').textContent='Copiar',1200);}catch(e){}};
+$('dl').onclick=()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([outText()]));a.download=OUT==='py'?'salida.py':'salida.json';a.click();}catch(e){}};
+$('run').onclick=compile;compile();
+</script>
+</body>
+</html>
